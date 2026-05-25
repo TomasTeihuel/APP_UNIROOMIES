@@ -59,6 +59,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uniroomies.presentation.AuthViewModel
 import com.example.uniroomies.ui.theme.UniroomiesTheme
 
 class MainActivity : ComponentActivity() {
@@ -124,6 +126,7 @@ private val listingTypes = listOf("Ofrezco pieza", "Ofrezco departamento", "Ofre
 
 @Composable
 private fun UniroomiesApp() {
+    val authViewModel: AuthViewModel = viewModel()
     var screen by rememberSaveable { mutableStateOf(Screen.Auth) }
     var selectedListingId by rememberSaveable { mutableStateOf(1) }
     var activeChatTitle by rememberSaveable { mutableStateOf("Consulta") }
@@ -154,7 +157,14 @@ private fun UniroomiesApp() {
                     },
                     canGoBack = screen !in listOf(Screen.Listings, Screen.Auth),
                     onBack = { screen = Screen.Listings },
-                    onMenu = { screen = it }
+                    onMenu = { screen = it },
+                    onSignOut = {
+                        authViewModel.signOut()
+                        profile = UserProfile()
+                        selectedListingId = 1
+                        activeChatTitle = "Consulta"
+                        screen = Screen.Auth
+                    }
                 )
             }
         },
@@ -178,6 +188,7 @@ private fun UniroomiesApp() {
         ) {
             when (screen) {
                 Screen.Auth -> AuthScreen(
+                    authViewModel = authViewModel,
                     onEnter = { createdProfile ->
                         profile = createdProfile
                         screen = Screen.Listings
@@ -233,7 +244,8 @@ private fun UniroomiesTopBar(
     title: String,
     canGoBack: Boolean,
     onBack: () -> Unit,
-    onMenu: (Screen) -> Unit
+    onMenu: (Screen) -> Unit,
+    onSignOut: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -271,6 +283,10 @@ private fun UniroomiesTopBar(
                         expanded = false
                         onMenu(Screen.Listings)
                     })
+                    DropdownMenuItem(text = { Text("Cerrar sesion") }, onClick = {
+                        expanded = false
+                        onSignOut()
+                    })
                 }
             }
         },
@@ -282,7 +298,10 @@ private fun UniroomiesTopBar(
 }
 
 @Composable
-private fun AuthScreen(onEnter: (UserProfile) -> Unit) {
+private fun AuthScreen(
+    authViewModel: AuthViewModel,
+    onEnter: (UserProfile) -> Unit
+) {
     var loginMode by rememberSaveable { mutableStateOf(true) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -292,6 +311,7 @@ private fun AuthScreen(onEnter: (UserProfile) -> Unit) {
     var city by rememberSaveable { mutableStateOf("Osorno") }
     var university by rememberSaveable { mutableStateOf(universities.first()) }
     var error by rememberSaveable { mutableStateOf("") }
+    var loading by rememberSaveable { mutableStateOf(false) }
     val scroll = rememberScrollState()
 
     Column(
@@ -344,21 +364,56 @@ private fun AuthScreen(onEnter: (UserProfile) -> Unit) {
                             else -> ""
                         }
                         if (error.isBlank()) {
-                            onEnter(
-                                UserProfile(
-                                    name = if (name.isBlank()) "Estudiante UNIROOMIES" else name,
-                                    age = if (age.isBlank()) "20" else age,
+                            loading = true
+                            val resolvedName = if (name.isBlank()) "Estudiante UNIROOMIES" else name
+                            val resolvedAge = if (age.isBlank()) "20" else age
+                            val resolvedCity = city.ifBlank { "Osorno" }
+                            val handleResult: (Result<com.example.uniroomies.data.model.UserProfileDto>) -> Unit = { result ->
+                                loading = false
+                                result
+                                    .onSuccess { firebaseProfile ->
+                                        onEnter(
+                                            UserProfile(
+                                                name = firebaseProfile.name.ifBlank { resolvedName },
+                                                age = firebaseProfile.age.ifBlank { resolvedAge },
+                                                sex = firebaseProfile.sex.ifBlank { sex },
+                                                city = firebaseProfile.city.ifBlank { resolvedCity },
+                                                university = firebaseProfile.university.ifBlank { university }
+                                            )
+                                        )
+                                    }
+                                    .onFailure { exception ->
+                                        error = exception.localizedMessage ?: "No se pudo autenticar con Firebase."
+                                    }
+                            }
+
+                            if (loginMode) {
+                                authViewModel.signIn(email, password, handleResult)
+                            } else {
+                                authViewModel.register(
+                                    email = email,
+                                    password = password,
+                                    name = resolvedName,
+                                    age = resolvedAge,
                                     sex = sex,
-                                    city = city.ifBlank { "Osorno" },
-                                    university = university
+                                    city = resolvedCity,
+                                    university = university,
+                                    onResult = handleResult
                                 )
-                            )
+                            }
                         }
                     },
+                    enabled = !loading,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(if (loginMode) "Entrar" else "Crear cuenta")
+                    Text(
+                        when {
+                            loading -> "Conectando..."
+                            loginMode -> "Entrar"
+                            else -> "Crear cuenta"
+                        }
+                    )
                 }
             }
         }

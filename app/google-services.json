@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "974404684701",
+    "project_id": "uniroomies-ed461",
+    "storage_bucket": "uniroomies-ed461.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:974404684701:android:f166dfba497df2015a7d74",
+        "android_client_info": {
+          "package_name": "com.example.uniroomies"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUZbSJM5949wKq4HAyvSPcMB_sjnn92dQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
