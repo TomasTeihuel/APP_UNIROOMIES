@@ -1,4 +1,4 @@
-package com.example.uniroomies.data.model
+package com.example.uniroomies.data.remote.dto
 
 data class UserProfileDto(
     val uid: String = "",

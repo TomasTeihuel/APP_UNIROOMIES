@@ -1,17 +1,13 @@
-package com.example.uniroomies.data.repository
+package com.example.uniroomies.data.remote.datasource
 
-import com.example.uniroomies.data.model.UserProfileDto
+import com.example.uniroomies.data.remote.dto.UserProfileDto
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-class AuthRepository(
+class AuthRemoteDataSource(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    fun signOut() {
-        auth.signOut()
-    }
-
     fun signIn(
         email: String,
         password: String,
@@ -38,16 +34,23 @@ class AuthRepository(
                 val uid = result.user?.uid.orEmpty()
                 val profileWithAuth = profile.copy(uid = uid, email = email)
                 onResult(Result.success(profileWithAuth))
-
-                firestore.collection("profiles")
-                    .document(uid)
-                    .set(profileWithAuth)
-                    .addOnFailureListener { error ->
-                        error.printStackTrace()
-                    }
+                saveProfile(profileWithAuth)
             }
             .addOnFailureListener { error ->
                 onResult(Result.failure(error))
+            }
+    }
+
+    fun signOut() {
+        auth.signOut()
+    }
+
+    private fun saveProfile(profile: UserProfileDto) {
+        firestore.collection("profiles")
+            .document(profile.uid)
+            .set(profile)
+            .addOnFailureListener { error ->
+                error.printStackTrace()
             }
     }
 

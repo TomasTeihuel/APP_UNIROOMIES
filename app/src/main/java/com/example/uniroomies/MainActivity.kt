@@ -60,7 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.uniroomies.presentation.AuthViewModel
+import com.example.uniroomies.presentation.viewmodel.AuthViewModel
 import com.example.uniroomies.ui.theme.UniroomiesTheme
 
 class MainActivity : ComponentActivity() {
@@ -368,7 +368,7 @@ private fun AuthScreen(
                             val resolvedName = if (name.isBlank()) "Estudiante UNIROOMIES" else name
                             val resolvedAge = if (age.isBlank()) "20" else age
                             val resolvedCity = city.ifBlank { "Osorno" }
-                            val handleResult: (Result<com.example.uniroomies.data.model.UserProfileDto>) -> Unit = { result ->
+                            val handleResult: (Result<com.example.uniroomies.domain.model.UserProfile>) -> Unit = { result ->
                                 loading = false
                                 result
                                     .onSuccess { firebaseProfile ->
